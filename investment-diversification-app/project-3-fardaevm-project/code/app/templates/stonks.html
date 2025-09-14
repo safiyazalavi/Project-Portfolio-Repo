@@ -1,0 +1,8 @@
+{% extends 'base.html%}
+
+{% block title%}Stonks{% endblock%}
+
+{% block body %}
+<h1> stonks</h1>
+    {{ df.to_html(classes=['table', 'table-responsive'])|safe }}
+{% end block%}

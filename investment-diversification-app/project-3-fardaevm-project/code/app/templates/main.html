@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ ticker }} Price{% endblock %}
+
+{% block body %}
+
+<div class="mx-auto w-50">
+    <div class="mb-3">
+        <label for="stock_ticker" class="form-label">Ticker:</label>
+        <input type="text" class="form-control" id="stock_ticker" value="{{ ticker }}" list="ticker-suggestions">
+        <datalist id="ticker-suggestions">
+            {% for t in ticker_options %}
+            <option value={{ t }}>
+                {% endfor %}
+        </datalist>
+        <label for="n_size">Tickers per group:</label>
+        <input type="number" class="form-control" id="n_size" value="5">
+
+        <label for="algorithm">Algorithm:</label>
+        <select class="custom-select" id="algorithm">
+            <optgroup label="Grouped">
+                <option value="LOUVAIN_G">Louvain (Grouped)</option>
+                <option value="LEIDEN_G">Leiden (Grouped)</option>
+            </optgroup>
+            <optgroup label="Not Grouped">
+                <option selected value="LOUVAIN">Louvain (Not Grouped)</option>
+                <option value="LEIDEN">Leiden (Not Grouped)</option>
+                <option value="PAGE_RANK">Page Rank</option>
+            </optgroup>
+        </select>
+
+        <button class="btn btn-dark mt-3 mb-3" type="button" id="search">Search</button>
+        <div>
+            <input class="form-group" type="checkbox" id="logTransform">
+            <label class="form-check-label" for="logTransform">
+                Log Transform Y-Axis
+            </label>
+
+        </div>
+    </div>
+</div>
+<div class="mx-auto">
+    {% if group_flag %}
+        {% for group in time_series_data %}
+            <div><canvas id="stock_prices_{{loop.index}}"></canvas></div>
+        {% endfor %}
+    {% else %}
+        <div><canvas id="stock_prices"></canvas></div>
+    {% endif %}
+</div>
+
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+
+    const algo = params.get("a");
+    if (algo) {
+        document.getElementById("algorithm").value = algo;
+    }
+
+    const n = params.get("n");
+    if (n) {
+        document.getElementById("n_size").value = n;
+    }
+
+
+    var CHARTS = [];
+    document.getElementById("search").addEventListener("click", function () {
+        update_ticker();
+    });
+    document.getElementById("logTransform").addEventListener('click', function (e) {
+        var checkbox = e.target;
+        console.log('clicked; checkbox checked:', checkbox.checked);
+        for (const c of CHARTS) {
+            if (checkbox.checked) {
+                c.options.scales.y.type = 'logarithmic';
+            } else {
+                c.options.scales.y.type = 'linear';
+            }
+            c.update();
+        }
+    })
+
+
+    function update_ticker() {
+        const ticker_name = document.getElementById("stock_ticker").value.trim();
+        const algo = document.getElementById("algorithm").value.trim();
+        const n = document.getElementById("n_size").value.trim();
+        console.log(n)
+        if (ticker_name && algo && n) {
+            window.location.href = `/${ticker_name}?a=${algo}&n=${n}`;
+            return;
+        }
+        else if (ticker_name && algo) {
+            window.location.href = `/${ticker_name}?a=${algo}`;
+            return;
+        }
+        else {
+            window.location.href = `/${ticker_name}`;
+            return;
+        }
+    };
+
+    {% if group_flag %}
+        {% for group in time_series_data %}
+
+        const stock_chart_{{ loop.index }} = new Chart(document.getElementById("stock_prices_{{loop.index}}"),
+            {
+                type: 'line',
+                data: {
+                    labels: {{ labels | safe }},
+            datasets: [
+            {% for ticker in group %}
+                {% for ticker_label, prices in ticker.items() %}
+                    {
+                        label: "{{ ticker_label }} Stock Price",
+                            data: {{ prices | safe }}
+                    }
+                    {{ ", " if not loop.last else "" }}
+                {% endfor %}
+                {{ ", " if not loop.last else "" }}
+            {% endfor %}
+                    ]
+                },
+        options: {
+            plugins: {
+                title: {
+                    display: {{ "true" if time_series_data | length > 1 else "false" }},
+                    text: "Group  {{loop.index}}"
+                },
+                tooltip: {
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                },
+                y: {
+                    display: true,
+                    type: 'linear',
+                }
+            }
+        }
+            });
+        CHARTS.push(stock_chart_{{ loop.index }});
+    {% endfor %}
+
+    {% else %}
+    const stock_chart = new Chart(document.getElementById("stock_prices"),
+        {
+            type: 'line',
+            data: {
+                labels: {{ labels | safe }},
+    datasets: [
+        {% for ticker in time_series_data %}
+    {% for ticker_label, prices in ticker.items() %}
+    {
+        label: "{{ ticker_label }} Stock Price",
+            data: {{ prices | safe }}
+    }
+    {{ ", " if not loop.last else "" }}
+    {% endfor %}
+    {{ ", " if not loop.last else "" }}
+    {% endfor %}
+                ]
+            },
+    options: {
+        plugins: {
+            tooltip: {
+                intersect: false
+            }
+        },
+        scales: {
+            x: {
+                display: true,
+		    },
+            y: {
+                display: true,
+                    type: 'linear',
+		    }
+        }
+
+    }
+        });
+    CHARTS.push(stock_chart);
+    {% endif %}
+
+
+
+</script>
+
+{% endblock %}

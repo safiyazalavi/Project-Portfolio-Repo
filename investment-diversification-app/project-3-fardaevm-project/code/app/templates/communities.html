@@ -1,0 +1,28 @@
+{% extends 'base.html%}
+
+{% block title%}Communities{% endblock%}
+
+{% block body %}
+<h1> communities</h1>
+    <table class="table table-responsive">
+      <tr>
+    {% for item in header %}
+    <th>
+      {{item}}
+    </th>
+    {% endfor %}
+    </tr>
+    <tbody>
+      {% for name, com_id in values %}
+      <tr>
+	<td>
+	  {{name}}
+	</td>
+	<td>
+	  {{com_id}}
+	</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+{% end block%}
